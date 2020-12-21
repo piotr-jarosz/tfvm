@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+
+
+[[ "$TF_DEBUG" == "True" ]] && echo "Debug mode ON"
+if [[ $(whoami) == "root" ]]; then
+  printf "You are running this tool as root. It may cause system damage. Type 'yes' if you want to continue: "
+  read
+  [[ "${REPLY}" == "yes" ]] || exit 1
+fi
+if [[ $1 == "setup" ]]; then
+  if [ $# -ne 3 ]; then
+    echo "Error: Setup require exactly 2 args. Terraform binary path and installation path"
+    exit 1
+  fi
+  if [[ "$PATH" != *":$2:"* && -d "$2" ]]; then
+    echo "Error: Installation path $2 doesn't exist or is not in your \$PATH variable"
+    exit 1
+  fi
+  echo ln -s "$2" "$3/terraform"
+  if [[ $? -ne 0 ]]; then
+    echo "Error: linking $2 $3/terraform failed"
+    exit 1
+  fi
+  exit 0
+fi
+
+TF_BIN=$(which terraform) || [[ "$1" == "install" ]] || {
+  echo "Error: Terraform not found. Check --help"
+  exit 1
+}
+TF_CURRENT=$(readlink $TF_BIN 2> /dev/null) && TF_PATH=$(dirname $TF_BIN) || [[ "$1" == "install" ]] || {
+  echo "Please remove binary and run setup first. terraform is not link"
+  exit 1
+}
+TF_CURRENT_VERSION=${TF_CURRENT##*_}
+if [[ "$TF_DEBUG" == "True" ]]; then
+  echo TF_BIN: $TF_BIN
+  echo TFPATH: $TF_PATH
+  echo TF_CURRENT: $TF_CURRENT
+  echo TF_CURRENT_VERSION: $TF_CURRENT_VERSION
+fi
+function switch() {
+  if [[ "$TF_DEBUG" != "True" ]]; then
+    rm -f $TF_BIN
+    ln -s $TF_PATH/terraform_"$1" $TF_PATH/terraform
+  else
+    echo """
+    rm -f $TF_BIN
+    ln -s $TF_PATH/terraform_"$1" $TF_PATH/terraform
+    """
+  fi
+  # TODO:Add simple check to be sure we properly setup link
+}
+
+function versions() {
+  tf_arr=()
+  for f in $TF_PATH/terraform_*; do
+    [[ "$TF_CURRENT_VERSION" == "${f##*_}" ]] && tf_arr+=("${f##*_} - current") || tf_arr+=("${f##*_}")
+  done
+  printf '%s\n' "${tf_arr[@]}"
+}
+
+function available_options() {
+  echo -e "Avaliable terraforms:"
+  echo "$(versions)"
+}
+
+installation() {
+  if [ -z $1 ]; then
+    echo "'install' require one possitional arguments: {version} [installation_path]. Example: $(basename $0) install 12.10"
+    exit 1
+  elif [[ "$(versions)" == *"$1"* ]]; then
+    echo "Verion already installed, remove it first"
+    exit 1
+  elif [[ ! -w $TF_PATH ]]; then
+    echo "Installation path $TF_PATH is not writable"
+    exit 1
+  else
+    TMP_DIR="/tmp/tfc-$(date +%s)"
+    mkdir -p "$TMP_DIR"
+    cd $TMP_DIR
+    if [[ -z $3 ]]; then
+      TF_URL="https://releases.hashicorp.com/terraform/0.$1/terraform_0.$1_linux_amd64.zip"
+    elif [[ "$3" == "http"* ]]; then
+      TF_URL="$3"
+    else
+      echo "Terraform URL provided, but URL is not starting with http..., please provide full address with protocol"
+    fi
+    TF_ARCHIVE=${TF_URL##*/}
+    wget $TF_URL -q --show-progress || { echo "Cannot find such version or download failed"
+    exit 1; }
+    unzip -d "${TF_ARCHIVE%.zip}" ${TF_ARCHIVE} || { echo "Exporting archive failed"
+    exit 1; }
+    TF_BIN=`find "${TF_ARCHIVE%.zip}/" -name "terraform"`
+    mv -vn $TF_BIN "$TF_PATH/terraform_$1" | grep -q . || ERR=$?
+    rm -rf $TMP_DIR
+    [[ -z $ERR ]] && echo "Terraform 0.$1 installed" || { echo "Installation failed: In the destination directory file: terraform_$1 exists. Remove it first to proceed."; exit 1;}
+  fi
+}
+
+if [[ "$1" == 'use' ]]; then
+  if [ -z $2 ]; then
+    echo "'use' require one possitional argument: {version}. Example: $(basename $0) use 12.10"
+    exit 1
+  elif [[ "$TF_CURRENT_VERSION" == "$2" ]]; then
+    echo "It's your current version; Nothing to do."
+    exit 0
+  elif [[ "$(versions)" != *"$2"* ]]; then
+    echo "No such version installed. To install it use: $(basename $0) install {version} {installation_path}"
+    exit 1
+  else
+    switch "$2"
+    exit 0
+  fi
+elif [[ "$1" == 'list' ]]; then
+  available_options
+elif [[ "$1" == 'install' ]]; then
+  shift
+  installation $@
+fi
