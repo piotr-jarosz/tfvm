@@ -64,7 +64,7 @@ fi
 function switch() {
   if [[ "$TF_DEBUG" != "True" ]]; then
     rm -f $TF_BIN
-    ln -s $TF_PATH/terraform_"$1" $TF_PATH/terraform
+    ln -s $TF_CURRENT_PATH/terraform_"$1" $TF_PATH/terraform
   else
     echo """
     rm -f $TF_BIN
