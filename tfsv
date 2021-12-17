@@ -1,5 +1,28 @@
 #!/usr/bin/env bash
 
+#------------------------------------------------------------------------------
+# Name       : tfsv
+# Author     : Piotr Jarosz <piotr.jarosz@icoqu.com
+# Usage      : ##### TODO ######
+# Version    : 0.0.4
+# Description: ##### TODO ######
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Copyright (c) 2020-2021 Piotr Jarosz
+#
+#------------------------------------------------------------------------------
 
 [[ "$TF_DEBUG" == "True" ]] && echo "Debug mode ON"
 if [[ $(whoami) == "root" ]]; then
@@ -25,7 +48,7 @@ if [[ $1 == "setup" ]]; then
   TMP_DIR="/tmp/tfc-$(date +%s)"
   mkdir -p "$TMP_DIR"
   cd $TMP_DIR
-  TF_URL="https://releases.hashicorp.com/terraform/0.$1/terraform_0.$1_linux_amd64.zip"
+  TF_URL="https://releases.hashicorp.com/terraform/$1/terraform_$1_linux_amd64.zip"
   TF_ARCHIVE=${TF_URL##*/}
   wget $TF_URL -q --show-progress || { echo "Cannot find such version or download failed"
   exit 1; }
@@ -34,7 +57,7 @@ if [[ $1 == "setup" ]]; then
   TF_BIN=`find "${TF_ARCHIVE%.zip}/" -name "terraform"`
   mv -vn $TF_BIN "$3/terraform_$1" | grep -q . || ERR=$?
   rm -rf $TMP_DIR
-  [[ -z $ERR ]] && echo "Terraform 0.$1 installed" || { echo "Installation failed: In the destination directory file: terraform_$1 exists. Remove it first to proceed."; exit 1;}
+  [[ -z $ERR ]] && echo "Terraform $1 installed" || { echo "Installation failed: In the destination directory file: terraform_$1 exists. Remove it first to proceed."; exit 1;}
 
   ln -s "$3/terraform_$1" "$2/terraform"
   if [[ $? -ne 0 ]]; then
@@ -74,6 +97,10 @@ function switch() {
   # TODO:Add simple check to be sure we properly setup link
 }
 
+# function upgrade {
+#   # TODO: upgrade TFSV
+# }
+
 function versions() {
   tf_arr=()
   for f in $TF_CURRENT_PATH/terraform_*; do
@@ -89,7 +116,7 @@ function available_options() {
 
 installation() {
   if [ -z $1 ]; then
-    echo "'install' require one possitional arguments: {version} [installation_path]. Example: $(basename $0) install 12.10"
+    echo "'install' require one possitional arguments: {version} [installation_path]. Example: $(basename $0) install 0.12.10"
     exit 1
   elif [[ "$(versions)" == *"$1"* ]]; then
     echo "Verion already installed, remove it first"
@@ -102,7 +129,7 @@ installation() {
     mkdir -p "$TMP_DIR"
     cd $TMP_DIR
     if [[ -z $3 ]]; then
-      TF_URL="https://releases.hashicorp.com/terraform/0.$1/terraform_0.$1_linux_amd64.zip"
+      TF_URL="https://releases.hashicorp.com/terraform/$1/terraform_$1_linux_amd64.zip"
     elif [[ "$3" == "http"* ]]; then
       TF_URL="$3"
     else
@@ -116,13 +143,13 @@ installation() {
     TF_BIN=`find "${TF_ARCHIVE%.zip}/" -name "terraform"`
     mv -vn $TF_BIN "$TF_CURRENT_PATH/terraform_$1" | grep -q . || ERR=$?
     rm -rf $TMP_DIR
-    [[ -z $ERR ]] && echo "Terraform 0.$1 installed" || { echo "Installation failed: In the destination directory file: terraform_$1 exists. Remove it first to proceed."; exit 1;}
+    [[ -z $ERR ]] && echo "Terraform $1 installed" || { echo "Installation failed: In the destination directory file: terraform_$1 exists. Remove it first to proceed."; exit 1;}
   fi
 }
 
 if [[ "$1" == 'use' ]]; then
   if [ -z $2 ]; then
-    echo "'use' require one possitional argument: {version}. Example: $(basename $0) use 12.10"
+    echo "'use' require one possitional argument: {version}. Example: $(basename $0) use 0.12.10"
     exit 1
   elif [[ "$TF_CURRENT_VERSION" == "$2" ]]; then
     echo "It's your current version; Nothing to do."
@@ -139,4 +166,11 @@ elif [[ "$1" == 'list' ]]; then
 elif [[ "$1" == 'install' ]]; then
   shift
   installation $@
+elif [[ "$1" == 'fix-versions' ]]; then
+  for f in $TF_CURRENT_PATH/terraform_*; do
+    v="${f##*_}"
+    mv $TF_CURRENT_PATH/terraform_$v $TF_CURRENT_PATH/terraform_0."$v"
+  done
+  switch 0."$TF_CURRENT_VERSION"
+  echo Binaries migrated to full version names, please check list of versions.
 fi
