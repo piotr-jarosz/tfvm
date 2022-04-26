@@ -40,6 +40,6 @@ Second you need to download ```tfsv```, put it there and setup permissions.
 
 And finally run command:
 
-    $ tfsv setup {version} {terraform PATH} {installation path}
+    $ ##tfsv setup {version} {terraform PATH} {installation path}
     $ tfsv setup 0.11.14 ~/bin ~/.tfvm/bin
 
