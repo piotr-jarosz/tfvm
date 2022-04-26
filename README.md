@@ -5,19 +5,22 @@ CLI for managing terraform-cli versions.
 
 Usage
 -----
-For convenience, you do not need to prepend tf version with '0.', so correct version is 12.14, and not 0.12.14 
 
 To use *version* of terraform:
 
     $ tfsv use {version}
 
-To list available versions and check current
+To list local versions and check current
 
     $ tfsv list
 
 To install selected *version*:
 
     $ tfsv install {version}
+    
+To list remote versions: #Not implemented yet
+
+    $ tfsv list --candidate
 
 Installation and Configuration
 -------------
@@ -38,5 +41,5 @@ Second you need to download ```tfsv```, put it there and setup permissions.
 And finally run command:
 
     $ tfsv setup {version} {terraform PATH} {installation path}
-    $ tfsv setup 11.14 ~/bin ~/.tfvm/bin
+    $ tfsv setup 0.11.14 ~/bin ~/.tfvm/bin
 
