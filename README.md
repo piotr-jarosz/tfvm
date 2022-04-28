@@ -35,6 +35,7 @@ You could add ~/bin to your PATH by setting up line in ```.bashrc```. It start w
 Second you need to download ```tfsv```, put it there and setup permissions.
 
     $ wget https://raw.githubusercontent.com/piotr-jarosz/tfvm/master/tfsv
+    $ mkdir -p ~/bin
     $ mv tfsv ~/bin/
     $ chmod 700 ~/bin/tfsv
 
